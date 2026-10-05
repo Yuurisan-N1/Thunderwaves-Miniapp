@@ -25,6 +25,20 @@ MY_PROJECT = "Thunder Waves Miniapp"
 BASE_URL = "https://api.thunderwaves.site/api"
 REF_CODE = "EUW89NYN"
 
+AD_NETWORK_NAMES = {
+    "adsgram": "Adsgram",
+    "monetag": "Monetag",
+    "gigapub": "GigaPub",
+    "adeixum": "Adeixum",
+    "onclicka": "OnClicka",
+}
+
+
+def ad_network_label(network, fallback):
+    key = " ".join(str(network or "").split()).lower()
+    return AD_NETWORK_NAMES.get(key) or clean_text(network, fallback)
+
+
 HEADERS_BASE = {
     "accept": "application/json",
     "content-type": "application/json",
@@ -260,7 +274,7 @@ class ThunderWaves:
     def min_watch(self):
         return int((self.app.get("ads") or {}).get("minWatchSeconds") or 10)
 
-    async def watch_ad(self, placement, extra=None, label="Next ad in"):
+    async def watch_ad(self, placement, extra=None, label="Next ad in", name=None):
         payload = {"placement": placement}
         if extra:
             payload.update(extra)
@@ -277,6 +291,9 @@ class ThunderWaves:
                 raise
         token = started.get("token")
         network = started.get("network") or ""
+        source = ad_network_label(network, "the ad network")
+        if name:
+            source = ad_network_label(name, source)
         minimum = int(started.get("minWatchSeconds") or self.min_watch)
         mode = (self.networks.get(network) or {}).get("clickMode")
         clicks = 1 if mode in ("reward", "require") else 0
@@ -298,7 +315,7 @@ class ThunderWaves:
                 raise
             reward = int(result.get("reward") or 0)
             self.ads_watched += 1
-            log_green(f"Ad view {self.ads_watched} was watched and rewarded {reward} WAVES")
+            log_green(f"Ad view {self.ads_watched} from {source} was watched and rewarded {reward} WAVES")
             return result
 
     async def claim_game_reward(self, session_id, label="Next ad in"):
@@ -1707,7 +1724,7 @@ def simple_wordsearch_moves(state):
 simple_WORDLIST = None
 
 def simple__words():
-    global WORDLIST
+    global simple_WORDLIST
     if simple_WORDLIST is None:
         simple_WORDLIST = load_words()
     return simple_WORDLIST
@@ -1988,8 +2005,9 @@ async def run_tasks(client):
         try:
             if ad:
                 left = int(ad.get("count") or 0) - int(ad.get("progress") or 0)
+                ad_label = ad_network_label(ad.get("network"), title)
                 for _ in range(max(0, left)):
-                    result = await client.watch_ad("task", {"taskId": task_id}, "Next ad in")
+                    result = await client.watch_ad("task", {"taskId": task_id}, "Next ad in", ad_label)
                     claimed += int(result.get("reward") or 0)
                     if (result.get("task") or {}).get("done"):
                         break
