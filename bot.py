@@ -23,7 +23,7 @@ YELLOW = "\033[93m"
 
 MY_PROJECT = "Thunder Waves Miniapp"
 BASE_URL = "https://api.thunderwaves.site/api"
-REF_CODE = "EUW89NYN"
+REF_CODE = ""
 
 AD_NETWORK_NAMES = {
     "adsgram": "Adsgram",
